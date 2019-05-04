@@ -1,0 +1,74 @@
+- name: Playbook for CNAE login
+  hosts: localhost
+# This calls localhost as we're just interacting with a REST API endpoint.
+
+  vars_files:
+    - vars/vars.yml
+
+  tasks:
+  - pause:
+      minutes: 5
+
+  - name: Get Whoami and OTP
+    uri:
+      url: 'https://{{cnae_ip}}/api/v1/whoami'
+
+      method: GET
+      headers:
+        Content-Type: "application/json"
+      return_content: no
+      validate_certs: no
+    register: otp
+
+  - name: print OTP
+    debug:
+      msg:
+        - "{{otp.x_nae_login_otp}}"
+
+  - name: Get Token from OTP
+    uri:
+      url: 'https://{{cnae_ip}}/api/v1/login'
+      body: { "username" : "{{username}}", "password" : "{{password}}" }
+      body_format: json
+      method: POST
+      headers:
+        Content-Type: application/json
+        X-NAE-LOGIN-OTP: '{{otp.x_nae_login_otp}}'
+        Cookie: "{{ otp.set_cookie }}"
+      return_content: no
+      validate_certs: no
+    register: TOKEN
+
+  - name: print Token
+    debug:
+      msg:
+        - "{{TOKEN.x_nae_csrf_token}}"
+
+  - name: Query CNAE
+    uri:
+      url: 'https://{{cnae_ip}}/api/v1/epochs?$page=0&$size=2'
+      method: GET
+      headers:
+        Content-Type: application/json
+        X-NAE-CSRF-TOKEN: '{{TOKEN.x_nae_csrf_token}}'
+        #x_nae_login_otp: '{{otp.x_nae_login_otp}}'
+        Cookie: "{{ TOKEN.set_cookie }}"
+      #url_password: "C!sc01234567890"
+      #url_username: "admin"
+      #force_basic_auth: yes
+      status_code: 200
+      return_content: no
+      validate_certs: no
+    register: CNAE
+
+  - name: print CNAE response
+    debug:
+      msg:
+        - "Real Time Change Analysis"
+        - "If Count > 8 This Pipeline will fail."
+        - "Check CNAE https://{{cnae_ip}}/#/real-time-change-analysis"
+        - 'Count: {{CNAE.json.value.data[1].event_info[3].count}}'
+  - name: When the real-time-change-analysis exceeds maximum count than the pipeline will fail
+    uri:
+      url: 'https://localhost:9999'
+    when: CNAE.json.value.data[1].event_info[3].count > 8

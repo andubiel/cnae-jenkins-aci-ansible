@@ -1,0 +1,109 @@
+---
+- name: VMM Domain
+  hosts: apic
+  connection: local
+  gather_facts: no
+  tasks:
+  - name: parse csv and make vars file
+    command: "python parse_csv.py vmm-domain.csv"
+
+
+- name: Configure Vmware VMM Domain
+  hosts: apic
+  connection: local
+  gather_facts: no
+  tasks:
+  - name: Load Password
+    include_vars: vars/password.yml
+  - name: Load Variables
+    include_vars:
+      file: vmm-domain.csv.yml
+      name: input
+
+  - name: Configure Vcenter
+    aci_rest:
+        hostname: "{{inventory_hostname}}"
+        username: "{{username}}"
+        password: "{{password}}"
+        #private_key: pki/admin.key
+        validate_certs: no
+        path: /api/node/mo/uni/vmmp-VMware/dom-{{item.vswitch_name}}.json
+        method: post
+        content: {
+            "vmmDomP": {
+                "attributes": {
+                    "dn": "uni/vmmp-VMware/dom-{{item.vswitch_name}}",
+                    "name": "{{item.vswitch_name}}",
+                    "rn": "dom-{{item.vswitch_name}}",
+                    "status": "created,modified"
+                },
+                "children": [
+                    {
+                        "vmmUsrAccP": {
+                            "attributes": {
+                                "dn": "uni/vmmp-VMware/dom-{{item.vswitch_name}}/usracc-{{vcenter_uname}}",
+                                "name": "{{vcenter_uname}}",
+                                "usr": "{{vcenter_uname}}",
+                                "pwd": "{{vcenter_pw}}",
+                                "rn": "usracc-{{vcenter_uname}}",
+                                "status": "created,modified"
+                            },
+                            "children": []
+                        }
+                    },
+                    {
+                        "vmmCtrlrP": {
+                            "attributes": {
+                                "dn": "uni/vmmp-VMware/dom-{{item.vswitch_name}}/ctrlr-vcenter",
+                                "name": "{{item.vcenter_name}}",
+                                "hostOrIp": "192.168.1.247",
+                                "dvsVersion": "6.5",
+                                "rootContName": "{{item.vcenter_dc}}",
+                                "rn": "ctrlr-vcenter",
+                                "status": "created,modified"
+                            },
+                            "children": [
+                                {
+                                    "vmmRsAcc": {
+                                        "attributes": {
+                                            "tDn": "uni/vmmp-VMware/dom-{{item.vswitch_name}}/usracc-{{vcenter_uname}}",
+                                            "status": "created,modified"
+                                        },
+                                        "children": []
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "vmmVSwitchPolicyCont": {
+                            "attributes": {
+                                "dn": "uni/vmmp-VMware/dom-{{item.vswitch_name}}/vswitchpolcont",
+                                "status": "created,modified"
+                            },
+                            "children": [
+                                {
+                                    "vmmRsVswitchOverrideLacpPol": {
+                                        "attributes": {
+                                            "tDn": "uni/infra/lacplagp-{{item.vswitch_name}}_lacpLagPol",
+                                            "status": "created,modified"
+                                        },
+                                        "children": []
+                                    }
+                                },
+                                {
+                                    "vmmRsVswitchOverrideLldpIfPol": {
+                                        "attributes": {
+                                            "tDn": "uni/infra/lldpIfP-{{item.vswitch_name}}_lldpIfPol",
+                                            "status": "created,modified"
+                                        },
+                                        "children": []
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    loop: "{{ input.raw_data }}"

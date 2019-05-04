@@ -1,0 +1,3 @@
+raw_data:
+- {External_Net: External_Net, common_bd: common-bd, common_l3: common-l3-ospf, common_vrf: common-v1,
+  extsubnet: 0.0.0.0/0, l3out_contract_global: l3out-contract-global, l3subnet: 10.10.10.1/24}

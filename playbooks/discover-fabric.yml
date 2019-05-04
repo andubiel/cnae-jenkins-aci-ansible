@@ -1,0 +1,64 @@
+---
+- name: Discover Fabric
+  hosts: apic
+  connection: local
+  gather_facts: no
+  
+  tasks:
+  - name: parse csv and make vars file
+    command: "python parse_csv.py discover-fabric.csv"
+  
+ 
+  - name: Load Password
+    include_vars: vars/password.yml
+  - name: Load Variables
+    include_vars:
+      file: discover-fabric.csv.yml
+      name: input
+
+  
+  - name: Create a Snapshot
+    aci_config_snapshot:
+        hostname: "{{inventory_hostname}}"
+        username: "{{username}}"
+        password: "{{password}}"
+        export_policy: config_backup
+        max_count: 10
+        description: Backups taken before new configs are applied.
+        validate_certs: no
+    delegate_to: localhost
+
+  - name: Add fabric node
+    aci_fabric_node:
+        hostname: "{{inventory_hostname}}"
+        username: "{{username}}"
+        password: "{{password}}"
+        validate_certs: no
+        node_id: "{{ item.NODE }}"
+        serial: "{{item.Serial}}"
+        switch: "{{ item.NODENAME }}"
+        validate_certs: no
+        state: present
+    loop: "{{ input.raw_data }}"
+
+  - name: Configure OOB IPs leaves and spines
+    aci_rest:
+        hostname: "{{inventory_hostname}}"
+        username: "{{username}}"
+        password: "{{password}}"
+        #private_key: pki/admin.key
+        validate_certs: no
+        path: /api/node/mo/uni/tn-mgmt/mgmtp-default/oob-default/rsooBStNode-[topology/pod-1/node-{{item.NODE}}].json
+        method: post
+        content:
+
+            mgmtRsOoBStNode:
+              attributes:
+                tDn: topology/pod-1/node-{{item.NODE}}
+                addr: "{{item.OOB_IP}}"
+                gw: "{{item.GW}}"
+                status: created,modified
+
+    #delegate_to: localhost
+
+    loop: "{{ input.raw_data }}"  

@@ -1,0 +1,168 @@
+---
+- hosts: apic
+  connection: local
+  gather_facts: no
+  tasks:
+  - name: parse csv and make vars file
+    command: "python parse_csv.py vpc-profile.csv"
+
+
+- name: Configure VPC and other Profiles
+  hosts: apic
+  connection: local
+  gather_facts: no
+
+  tasks:
+  - name: Load Password
+    include_vars: vars/password.yml
+  - name: Load Variables
+    include_vars:
+      file: vpc-profile.csv.yml
+      name: input
+
+  - name: Configure SWitch Profile
+    aci_switch_policy_leaf_profile:
+        hostname: "{{inventory_hostname}}"
+        username: "{{username}}"
+        password: "{{password}}"
+        #private_key: pki/admin.key
+        validate_certs: no
+        leaf_profile: "{{item.LEAFPROF}}"
+        description: sw_description
+        state: present
+    loop: "{{ input.raw_data }}"
+
+  - name: adding a switch policy leaf profile selector associated Node Block range (w/ policy group)
+    aci_switch_leaf_selector:
+        hostname: "{{inventory_hostname}}"
+        username: "{{username}}"
+        password: "{{password}}"
+        #private_key: pki/admin.key
+        validate_certs: no
+        leaf_profile: "{{item.LEAFPROF}}"
+        leaf: "{{item.LEAFSELECTOR}}"
+        leaf_node_blk: single0
+        from: "{{item.NODE}}"
+        to: "{{item.NODE}}"
+        policy_group: policygroupname
+        state: present
+    loop: "{{ input.raw_data }}"
+
+  - name: Associating an interface selector profile to a switch policy leaf profile
+    aci_interface_selector_to_switch_policy_leaf_profile:
+        hostname: "{{inventory_hostname}}"
+        username: "{{username}}"
+        password: "{{password}}"
+        #private_key: pki/admin.key
+        validate_certs: no
+        leaf_profile: "{{item.LEAFPROF}}"
+        interface_selector: "{{item.IFSELECTOR}}"
+        state: present
+    loop: "{{ input.raw_data }}"
+
+
+  - name: VPC Interface Selector
+    aci_rest:
+        hostname: "{{inventory_hostname}}"
+        username: "{{username}}"
+        password: "{{password}}"
+        #private_key: pki/admin.key
+        validate_certs: no
+        path: /api/node/mo/uni/infra.json
+        method: post
+        content: {
+    "infraInfra": {
+        "attributes": {
+            "dn": "uni/infra",
+            "status": "modified,created"
+        },
+        "children": [
+            {
+                "infraAccPortP": {
+                    "attributes": {
+                        "dn": "uni/infra/accportprof-{{item.VPCIFSELECTOR}}",
+                        "name": "{{item.VPCIFSELECTOR}}",
+                        "descr": "GUI Interface Selector Generated PortP Profile: {{item.VPCLEAFPROF}}",
+                        "status": "created,modified"
+                    },
+                    "children": []
+                }
+            },
+            {
+                "infraNodeP": {
+                    "attributes": {
+                        "dn": "uni/infra/nprof-{{item.VPCLEAFPROF}}",
+                        "name": "{{item.VPCLEAFPROF}}",
+                        "descr": "GUI Interface Selector Generated Profile: {{item.VPCLEAFPROF}}",
+                        "status": "created,modified"
+                    },
+                    "children": [
+                        {
+                            "infraLeafS": {
+                                "attributes": {
+                                    "dn": "uni/infra/nprof-{{item.VPCLEAFPROF}}/leaves-{{item.VPCLEAFSELECTOR}}-typ-range",
+                                    "name": "{{item.VPCLEAFSELECTOR}}",
+                                    "type": "range",
+                                    "status": "created,modified"
+                                },
+                                "children": [
+                                    {
+                                        "infraNodeBlk": {
+                                            "attributes": {
+                                                "dn": "uni/infra/nprof-{{item.VPCLEAFPROF}}/leaves-{{item.VPCLEAFSELECTOR}}-typ-range/nodeblk-single0",
+                                                "status": "created,modified",
+                                                "from_": "{{item.VPC_Member1}}",
+                                                "to_": "{{item.VPC_Member1}}",
+                                                "name": "single0",
+                                                "rn": "nodeblk-single0"
+                                            },
+                                            "children": []
+                                        }
+                                    },
+                                    {
+                                        "infraNodeBlk": {
+                                            "attributes": {
+                                                "dn": "uni/infra/nprof-{{item.VPCLEAFPROF}}/leaves-{{item.VPCLEAFSELECTOR}}-typ-range/nodeblk-single1",
+                                                "status": "created,modified",
+                                                "from_": "{{item.VPC_Member2}}",
+                                                "to_": "{{item.VPC_Member2}}",
+                                                "name": "single1",
+                                                "rn": "nodeblk-single1"
+                                            },
+                                            "children": []
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "infraRsAccPortP": {
+                                "attributes": {
+                                    "tDn": "uni/infra/accportprof-{{item.VPCIFSELECTOR}}",
+                                    "status": "created,modified"
+                                },
+                                "children": []
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}
+    loop: "{{ input.raw_data }}"
+
+
+  - name: Add vPC Protection Group
+    aci_switch_policy_vpc_protection_group:
+        hostname: "{{inventory_hostname}}"
+        username: "{{username}}"
+        password: "{{password}}"
+        #private_key: pki/admin.key
+        validate_certs: no
+        protection_group: "{{item.VPC_GRP}}"
+        protection_group_id: "{{item.VPC_ID}}"
+        switch_1_id: "{{item.VPC_Member1}}"
+        switch_2_id: "{{item.VPC_Member2}}"
+        state: present
+    loop: "{{ input.raw_data }}"

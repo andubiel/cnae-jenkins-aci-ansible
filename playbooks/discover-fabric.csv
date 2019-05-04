@@ -1,0 +1,4 @@
+NODE,Serial,NODENAME,OOB_IP,GW,backup-name
+101,TEP-1-101,leaf-101,192.168.1.190/24,192.168.1.1,Pre-Discovery
+102,TEP-1-102,leaf-102,192.168.1.191/24,192.168.1.1,Pre-Discovery
+103,TEP-1-103,spine-103,192.168.1.192/24,192.168.1.1,Pre-Discovery

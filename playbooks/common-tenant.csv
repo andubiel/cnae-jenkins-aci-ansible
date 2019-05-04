@@ -1,0 +1,2 @@
+common_bd,common_vrf,common_l3,l3out_contract_global,l3subnet,extsubnet,External_Net
+common-bd,common-v1,common-l3-ospf,l3out-contract-global,10.10.10.1/24,0.0.0.0/0,External_Net

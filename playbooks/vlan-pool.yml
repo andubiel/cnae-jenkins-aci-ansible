@@ -1,0 +1,80 @@
+---
+- name: Vlan Pool
+  hosts: apic
+  connection: local
+  gather_facts: no
+  tasks:
+  - name: parse csv and make vars file
+    command: "python parse_csv.py vlan-pool.csv"
+
+
+- name: Configure Vlan Pool
+  hosts: apic
+  connection: local
+  gather_facts: no
+
+  tasks:
+  - name: Load Password
+    include_vars: vars/password.yml
+  - name: Load Variables
+    include_vars:
+      file: vlan-pool.csv.yml
+      name: input
+
+
+
+  - name: Add a new VLAN pool
+    aci_vlan_pool:
+        hostname: "{{inventory_hostname}}"
+        username: "{{username}}"
+        password: "{{password}}"
+        #private_key: pki/admin.key
+        validate_certs: no
+        pool: "{{item.VLANPOOL}}"
+        pool_allocation_mode: static
+        description: Phys Dom VLANs
+        state: present
+    loop: "{{ input.raw_data }}"
+
+
+  - name: Add a new VLAN encap block
+    aci_vlan_pool_encap_block:
+        hostname: "{{inventory_hostname}}"
+        username: "{{username}}"
+        password: "{{password}}"
+        #private_key: pki/admin.key
+        validate_certs: no
+        pool: "{{item.VLANPOOL}}"
+        block_name: block
+        pool_allocation_mode: static
+        block_start: "{{item.VLAN_RANGE_START}}"
+        block_end: "{{item.VLAN_RANGE_FINISH}}"
+        state: present
+    loop: "{{ input.raw_data }}"
+
+  - name: Bind a physical domain to VLAN pool
+    aci_domain_to_vlan_pool:
+        hostname: "{{inventory_hostname}}"
+        username: "{{username}}"
+        password: "{{password}}"
+        #private_key: pki/admin.key
+        validate_certs: no
+        domain: phys
+        domain_type: phys
+        pool: "{{item.VLANPOOL}}"
+        pool_allocation_mode: static
+        state: present
+    loop: "{{ input.raw_data }}"
+
+  - name: Add AEP to domain binding
+    aci_aep_to_domain: &binding_present
+        hostname: "{{inventory_hostname}}"
+        username: "{{username}}"
+        password: "{{password}}"
+        #private_key: pki/admin.key
+        validate_certs: no
+        aep: default
+        domain: phys
+        domain_type: phys
+        state: present
+    delegate_to: localhost

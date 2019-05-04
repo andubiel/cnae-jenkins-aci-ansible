@@ -1,0 +1,189 @@
+
+
+- name: Common Tenant L3out
+  hosts: apic
+  connection: local
+  become: false
+  gather_facts: false
+
+  tasks:
+    - name: parse csv and make vars file
+      command: "python parse_csv.py common-tenant.csv"
+
+- name: Configure Common-Tenant L3out
+  hosts: apic
+  connection: local
+  gather_facts: no
+
+
+
+  tasks:
+  - name: Load Password
+    include_vars: vars/password.yml
+
+  - name: Common Variables
+    include_vars:
+      file: common-tenant.csv.yml
+      name: input
+
+  - name: Create VRF
+    aci_vrf:
+      hostname: "{{ inventory_hostname }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      tenant: common
+      vrf: "{{ item.common_vrf }}"
+      description: "VRF configured by Ansible"
+      validate_certs: no
+      state: present
+    loop: "{{ input.raw_data }}"
+
+  - name: Create BD
+    aci_bd:
+      hostname: "{{ inventory_hostname }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      vrf: "{{ item.common_vrf }}"
+      tenant: common
+      bd: "{{ item.common_bd }}"
+      enable_routing: yes
+      arp_flooding: no
+      l2_unknown_unicast: proxy
+      description: "BD configured by Ansible"
+      validate_certs: no
+      state: present
+    loop: "{{ input.raw_data }}"
+
+
+  - name: Add a new Common L3Out
+    aci_l3out:
+      hostname: "{{ inventory_hostname }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      tenant: common
+      name: "{{ item.common_l3 }}"
+      domain: l3dom
+      description: "L3Out for Common tenant"
+      vrf: prod
+      l3protocol: ospf
+      route_control: export
+      validate_certs: no
+      state: present
+    loop: "{{ input.raw_data }}"
+
+  - name: Create Common BD Subnet
+    aci_bd_subnet:
+      hostname: "{{ inventory_hostname }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      tenant: common
+      bd: "{{ item.common_bd }}"
+      gateway: 10.10.10.1
+      mask: 24
+      scope: "private"
+      description: "BD subnet added by Ansible"
+      validate_certs: no
+      state: present
+    loop: "{{ input.raw_data }}"
+
+  - name: Create Filter
+    aci_filter:
+      hostname: "{{inventory_hostname}}"
+      username: "{{username}}"
+      password: "{{password}}"
+      #private_key: pki/admin.key
+      validate_certs: no
+      tenant: common
+      filter: filter1
+      state: present
+    loop: "{{ input.raw_data }}"
+
+  - name: Create Filter Entry
+    aci_filter_entry:
+      hostname: "{{inventory_hostname}}"
+      username: "{{username}}"
+      password: "{{password}}"
+      #private_key: pki/admin.key
+      validate_certs: no
+      tenant: common
+      filter: filter1
+      filter_entry: filter_entry1
+      state: present
+    loop: "{{ input.raw_data }}"
+
+  - name: L3out Contract
+    aci_contract:
+      hostname: "{{ inventory_hostname }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      contract: "{{ item.l3out_contract_global }}"
+      tenant: common
+      scope: global
+      description: "Contract created by Ansible"
+      validate_certs: no
+      state: present
+    loop: "{{ input.raw_data }}"
+
+  - name: L3 out contract subject
+    aci_contract_subject:
+      hostname: "{{ inventory_hostname }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      tenant: common
+      contract: "{{ item.l3out_contract_global }}"
+      subject: default
+      description: l3out common subject
+      validate_certs: no
+      reverse_filter: yes
+      priority: level1
+      dscp: unspecified
+      state: present
+    loop: "{{ input.raw_data }}"
+
+  - name: Bind Contract Subject to filter
+    aci_contract_subject_to_filter:
+        hostname: "{{inventory_hostname}}"
+        username: "{{username}}"
+        password: "{{password}}"
+        #private_key: pki/admin.key
+        validate_certs: no
+        tenant: common
+        contract: "{{ item.l3out_contract_global }}"
+        contract_subject: default
+        filter: filter1
+        state: present
+    loop: "{{ input.raw_data }}"
+
+  - name: Ext Net
+    aci_rest:
+        hostname: "{{inventory_hostname}}"
+        username: "{{username}}"
+        password: "{{password}}"
+        #private_key: pki/admin.key
+        validate_certs: no
+        path: /api/node/mo/uni/tn-common/out-common-l3-ospf/instP-EXT.json
+        method: post
+        content: {
+            "l3extInstP": {
+                "attributes": {
+                    "dn": "uni/tn-common/out-common-l3-ospf/instP-EXT",
+                    "name": "EXT",
+                    "rn": "instP-EXT",
+                    "status": "created,modified"
+                },
+                "children": [
+                    {
+                        "l3extSubnet": {
+                            "attributes": {
+                                "dn": "uni/tn-common/out-common-l3-ospf/instP-EXT/extsubnet-[0.0.0.0/0]",
+                                "ip": "0.0.0.0/0",
+                                "aggregate": "",
+                                "rn": "extsubnet-[0.0.0.0/0]",
+                                "status": "created,modified"
+                            },
+                            "children": []
+                        }
+                    }
+                ]
+            }
+        }

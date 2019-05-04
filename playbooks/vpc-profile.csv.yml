@@ -1,0 +1,11 @@
+raw_data:
+- {GW: 192.168.1.1, IFSELECTOR: L101-LeafProf_ifselector, LEAFPROF: L101-LeafProf,
+  LEAFSELECTOR: L101-LeafSelector, NODE: '101', NODENAME: leaf-101, OOB_IP: 192.168.1.100/24,
+  Serial#: TEP-1-101, VPCIFSELECTOR: L101-L102-LeafProf_ifselector, VPCIntProf: L101-L102-vPC-IntProf,
+  VPCLEAFPROF: L101-L102-LeafProf, VPCLEAFSELECTOR: L101-L102-LeafSelector, VPCNAME: VPC-tdub,
+  VPC_GRP: '100', VPC_ID: '149', VPC_Member1: '101', VPC_Member2: '102'}
+- {GW: 192.168.1.1, IFSELECTOR: L102-LeafProf_ifselector, LEAFPROF: L102-LeafProf,
+  LEAFSELECTOR: L102-LeafSelector, NODE: '102', NODENAME: leaf-102, OOB_IP: 192.168.1.101/24,
+  Serial#: TEP-1-102, VPCIFSELECTOR: L101-L102-LeafProf_ifselector, VPCIntProf: L101-L102-vPC-IntProf,
+  VPCLEAFPROF: L101-L102-LeafProf, VPCLEAFSELECTOR: L101-L102-LeafSelector, VPCNAME: VPC-tdub,
+  VPC_GRP: '100', VPC_ID: '149', VPC_Member1: '102', VPC_Member2: '101'}

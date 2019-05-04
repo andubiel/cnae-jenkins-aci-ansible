@@ -1,0 +1,60 @@
+---
+- name: BGP
+  hosts: apic
+  connection: local
+  gather_facts: no
+  tasks:
+  - name: parse csv and make vars file
+    command: "python parse_csv.py bgp.csv"
+
+
+- name: Configure BGP
+  hosts: apic
+  connection: local
+  gather_facts: no
+  tasks:
+  - name: Load Password
+    include_vars: vars/password.yml
+  - name: Load Variables
+    include_vars:
+      file: bgp.csv.yml
+      name: input
+
+  - name: Configure BGP ASN
+    aci_rest:
+        hostname: "{{inventory_hostname}}"
+        username: "{{username}}"
+        password: "{{password}}"
+        #private_key: pki/admin.key
+        validate_certs: no
+        path: /api/node/mo/uni/fabric/bgpInstP-default/as.json
+        method: post
+        content:
+            bgpAsP:
+                attributes:
+                    dn: uni/fabric/bgpInstP-default/as
+                    rn: as
+                    asn: "{{item.ASN}}"
+                    status: created,modified
+    loop: "{{ input.raw_data }}"
+  - name: Configure Route Reflector
+    aci_rest:
+        hostname: "{{inventory_hostname}}"
+        username: "{{username}}"
+        password: "{{password}}"
+        #private_key: pki/admin.key
+        validate_certs: no
+        path: /api/node/mo/uni/fabric/bgpInstP-default/rr/{{item.node}}.json
+        method: post
+        content: {
+           "bgpRRNodePEp": {
+        "attributes": {
+            "dn": "uni/fabric/bgpInstP-default/rr/{{item.node}}",
+            "rn": "{{item.node}}",
+            "status": "created,modified",
+            "id": "{{item.id}}"
+        },
+        "children": []
+    }
+}
+    loop: "{{ input.raw_data }}"

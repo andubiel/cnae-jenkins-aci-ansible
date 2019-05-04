@@ -1,0 +1,7 @@
+raw_data:
+- {GW: 192.168.1.1, NODE: '101', NODENAME: leaf-101, OOB_IP: 192.168.1.100/24, Serial: TEP-1-101,
+  backup-name: Pre-Discovery}
+- {GW: 192.168.1.1, NODE: '102', NODENAME: leaf-102, OOB_IP: 192.168.1.101/24, Serial: TEP-1-102,
+  backup-name: Pre-Discovery}
+- {GW: 192.168.1.1, NODE: '103', NODENAME: spine-103, OOB_IP: 192.168.1.102/24, Serial: TEP-1-103,
+  backup-name: Pre-Discovery}

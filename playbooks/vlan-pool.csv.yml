@@ -1,0 +1,3 @@
+raw_data:
+- {VLANPOOL: vlan-pool-1, VLAN_RANGE_FINISH: '20', VLAN_RANGE_START: '10'}
+- {VLANPOOL: vlan-pool-1, VLAN_RANGE_FINISH: '20', VLAN_RANGE_START: '10'}

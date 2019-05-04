@@ -1,0 +1,7 @@
+raw_data:
+- {VPCNAME: VPC-tdub, app_profile: demo1-App1, common_l3: common-l3-ospf, l3out_contract_global: l3out_contract_global,
+  new_bd: bd-1, new_contract: web-to-app1, new_epg: web1-epg, new_subnet: 2.2.2.1,
+  new_tenant: Demo1, new_vrf: vrf-demo1, second_epg: app1-epg, vlan1: '10', vlan2: '11'}
+- {VPCNAME: VPC-tdub, app_profile: demo2-App2, common_l3: common-l3-ospf, l3out_contract_global: l3out_contract_global,
+  new_bd: bd-2, new_contract: web-to-app2, new_epg: web2-epg, new_subnet: 3.3.3.1,
+  new_tenant: Demo2, new_vrf: vrf-demo2, second_epg: app2.epg, vlan1: '12', vlan2: '13'}
